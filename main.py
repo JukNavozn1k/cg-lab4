@@ -1,6 +1,8 @@
 from tkinter import *
 import tkinter
 from time import sleep
+from numba import njit
+from matplotlib.pyplot import draw
 # ~ Дополнительные методы
 def sign(x):
     if x >= 0: return 1
@@ -9,16 +11,9 @@ def sign(x):
 
 # ~ Алгоритмы отрисовки
 def draw_dot(x,y,col='black'):
-    global root,sbsm
-    x1,y1 = x-1,y-1
-    x2,y2 = x+1,y+1
-    if sbsm.get() == 0:canvas.create_oval(x1, y1, x2, y2,fill=col,width=1,outline=col) 
-    else:
-        sleep(0.001)
-        canvas.create_oval(x1, y1, x2, y2,fill='red',width=1,outline='red') 
-        root.update()
-
+   canvas.create_line(x,y,x+1,y+1,fill=col) 
 def BresenhamV4(x1,y1,x2,y2): # четырёхсвязная развёртка 
+    global ContourPoints
     x,y,dx,dy,s1,s2 = x1,y1,abs(x2-x1),abs(y2-y1),sign(x2-x1),sign(y2-y1)
     l = None
     if dy<dx: l = False
@@ -28,7 +23,7 @@ def BresenhamV4(x1,y1,x2,y2): # четырёхсвязная развёртка
     e = 2*dy-dx
     for i in range(1,dx+dy):
         draw_dot(x,y)
-        pixels.append([x,y])
+        ContourPoints.append([x,y])
         if e < 0:
             if l: y = y + s2
             else: x = x + s1
@@ -37,6 +32,7 @@ def BresenhamV4(x1,y1,x2,y2): # четырёхсвязная развёртка
             if l : x = x + s1
             else: y = y + s2
             e = e - 2*dx
+    ContourPoints.append([x,y])
     draw_dot(x,y)
 
 
@@ -45,6 +41,7 @@ def BresenhamV4(x1,y1,x2,y2): # четырёхсвязная развёртка
 
 
 # ~UI Функционал
+
 def callback(event): # метод отслеживания нажатий
     global counter,coords,var
     coords.append([int(event.x),int(event.y)])
@@ -53,55 +50,74 @@ def callback(event): # метод отслеживания нажатий
         BresenhamV4(coords[tmp-2][0],coords[tmp-2][1],coords[tmp-1][0],coords[tmp-1][1])
          
     print('Current click: ',counter + 1)
+    print('Vertex coordinates: ',coords)
     counter += 1
 # функция, замыкающая контур => соед начало с концом
 def close():
     global coords
     BresenhamV4(coords[0][0],coords[0][1],coords[len(coords)-1][0],coords[len(coords)-1][1])
 
+def pave(sign,SeedPixel):
+
+     global ContourPoints,coords,counter,ci
+     
+     InnerPoints = []  # координаты точек внутри замкнутого контура 
+     while len(SeedPixel) != 0:
+            pixel = SeedPixel.pop()
+            x,y = pixel[0],pixel[1]
+            draw_dot(x,y,ci)
+            if [x,y] not in InnerPoints: InnerPoints.append([x,y])
+            xw = x
+            x = x + 1
+            while [x,y] not in ContourPoints:
+                if [x,y] not in InnerPoints:
+                    InnerPoints.append([x,y])
+                    draw_dot(x,y,ci)
+                x = x + 1
+            xr = x - 1
+            x = xw 
+            x = x - 1
+            while [x,y] not in ContourPoints:  
+                if [x,y] not in InnerPoints:
+                    InnerPoints.append([x,y])
+                    draw_dot(x,y,ci)
+                x = x - 1
+            xl = x + 1
+       # x = x + 1
+            x = xl
+            y = y + sign
+            while x <= xr:
+                root.update()
+                fl = False
+                while ([x,y] not in ContourPoints) and ([x,y] not in InnerPoints) and (x < xr):
+                    x = x + 1
+                    if not fl: fl = True
+                    else :
+                        if (x == xr) and ([x,y] not in ContourPoints) and ([x,y] not in InnerPoints):SeedPixel.append([x,y])
+                        else: SeedPixel.append([x-1,y])
+                        fl = False
+                        
+                xb = x
+                while ([x,y] in ContourPoints) or ([x,y] in InnerPoints) and (x < xr): x = x + 1
+                if x == xb: x = x + 1
+            
+            if len(SeedPixel) <= 3: break
+     print('Finished with dy = ', sign)
+        
+
+
 def fillSquare(event):
-    global pixels,coords,counter
-    close()
-    ci = 'blue'
-    SeedPixel = [[event.x,event.y]]
-    while len(SeedPixel) > 0:
-        pixel = SeedPixel.pop()
-        x,y = pixel[0],pixel[1]
-        draw_dot(x,y,ci)
-        tmpX,tmpY = x,y
-        # вправо вниз
-        while [x,y] not in pixels:
-            while [x,y] not in pixels:
-                draw_dot(x,y,ci)
-                x = x + 1
-            x = tmpX
-            y = y + 1
-        # влево вниз
-        x,y = tmpX,tmpY
-        while [x,y] not in pixels:
-            while [x,y] not in pixels:
-                draw_dot(x,y,ci)
-                x = x - 1
-            x = tmpX
-            y = y + 1
-        # вправо вверх
-        x,y = tmpX,tmpY
-        while [x,y] not in pixels:
-            while [x,y] not in pixels:
-                draw_dot(x,y,ci)
-                x = x + 1
-            x = tmpX
-            y = y - 1 
-        # влево вверх
-        x,y = tmpX,tmpY
-        while [x,y] not in pixels:
-            while [x,y] not in pixels:
-                draw_dot(x,y,ci)
-                x = x - 1
-            x = tmpX
-            y = y - 1 
+    global ContourPoints,coords,counter,ci
+  #  close()
+    pave(-1,[[event.x,event.y]])
+   # pave(-1,[[event.x,event.y]])
+                    
+
+
+
+    # Обнуление параметров
+    ContourPoints = []
     coords = []
-    pixels = []
     counter = 0
 
         
@@ -111,24 +127,25 @@ def fillSquare(event):
         
 
 def clear(): # очистить холст
-    global coords,counter
-    counter = 0
+    global InnerPoints,ContourPoints,coords
+    InnerPoints = []
+    ContourPoints = []
     coords = []
-    pixels = []
+    counter = 0
     canvas.delete("all") 
 # UI Функционал~
 
 if __name__ == "__main__":
     # Инициализация и базовая настройки окна
     root = Tk()
-    root.title('Лабораторная работа № 2 Реализация вывода сплайнов Безье')
+    root.title('Лабораторные работы № 4 Реализация алгоритмов растровой графики для заполнения сплошных областей')
     root.resizable(0, 0)
 
     # Инициализация важных переменных
     counter = 0 # переменная, в которой хранится номер клика мыши
-    coords = [] # координаты точек
-    pixels = [] # координаты точек замкнутого контура
-    
+    coords = [] # координаты вершин
+    ContourPoints = [] # координаты точек линии замкнутого контура
+    ci = 'blue' # цвет, в который будет подкрашиватся замкнутая область
 
     # Инициализация и настройка холста
     canvas= Canvas(root, width=800, height=600,bg='white')
