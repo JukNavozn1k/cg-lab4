@@ -1,8 +1,7 @@
 from tkinter import *
 import tkinter
 from time import sleep
-from numba import njit
-from matplotlib.pyplot import draw
+
 # ~ Дополнительные методы
 def sign(x):
     if x >= 0: return 1
@@ -56,15 +55,27 @@ def callback(event): # метод отслеживания нажатий
 def close():
     global coords
     BresenhamV4(coords[0][0],coords[0][1],coords[len(coords)-1][0],coords[len(coords)-1][1])
+#функция, находящая максимальный и минимальный y
+def findMm():
+    global ContourPoints
+    ym,YM = coords[0][1],coords[0][1]
+    for i in range(len(ContourPoints)):
+        if ym >= ContourPoints[i][1]: ym = ContourPoints[i][1]
+        if YM <= ContourPoints[i][1]: YM = ContourPoints[i][1]
+    return [ym,YM]
+
 
 def pave(sign,SeedPixel):
 
      global ContourPoints,coords,counter,ci
-     
+     tmpY  = None
+     ym,YM = findMm()
      InnerPoints = []  # координаты точек внутри замкнутого контура 
      while len(SeedPixel) != 0:
+            
             pixel = SeedPixel.pop()
             x,y = pixel[0],pixel[1]
+            tmpY = y
             draw_dot(x,y,ci)
             if [x,y] not in InnerPoints: InnerPoints.append([x,y])
             xw = x
@@ -101,16 +112,19 @@ def pave(sign,SeedPixel):
                 while ([x,y] in ContourPoints) or ([x,y] in InnerPoints) and (x < xr): x = x + 1
                 if x == xb: x = x + 1
             
-            if len(SeedPixel) <= 3: break
+            if [x,y] in coords or y <= ym  or y >= YM  : break
+            if sign == 1 and tmpY > y: break
+            if sign == -1 and tmpY < y: break
+            print(ym,YM,y)
      print('Finished with dy = ', sign)
         
 
 
 def fillSquare(event):
     global ContourPoints,coords,counter,ci
-  #  close()
+    close()
+    pave(1,[[event.x,event.y]])
     pave(-1,[[event.x,event.y]])
-   # pave(-1,[[event.x,event.y]])
                     
 
 
