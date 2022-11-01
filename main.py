@@ -67,7 +67,7 @@ def findMm():
 
 def pave(sign,SeedPixel):
 
-     global ContourPoints,coords,counter,ci
+     global ContourPoints,coords,counter,ci,sbsm
      tmpY  = None
      ym,YM = findMm()
      InnerPoints = []  # координаты точек внутри замкнутого контура 
@@ -76,6 +76,8 @@ def pave(sign,SeedPixel):
             pixel = SeedPixel.pop()
             x,y = pixel[0],pixel[1]
             tmpY = y
+            tmpInnerPoints = [el for el in InnerPoints]
+            
             draw_dot(x,y,ci)
             if [x,y] not in InnerPoints: InnerPoints.append([x,y])
             xw = x
@@ -98,7 +100,7 @@ def pave(sign,SeedPixel):
             x = xl
             y = y + sign
             while x <= xr:
-                root.update()
+                if sbsm.get() == 1 :  root.update()
                 fl = False
                 while ([x,y] not in ContourPoints) and ([x,y] not in InnerPoints) and (x < xr):
                     x = x + 1
@@ -112,10 +114,13 @@ def pave(sign,SeedPixel):
                 while ([x,y] in ContourPoints) or ([x,y] in InnerPoints) and (x < xr): x = x + 1
                 if x == xb: x = x + 1
             
-            if [x,y] in coords or y <= ym  or y >= YM  : break
-            if sign == 1 and tmpY > y: break
-            if sign == -1 and tmpY < y: break
-            print(ym,YM,y)
+                if [x,y] in coords or y <= ym  or y >= YM  : break
+                if sign == 1 and tmpY > y: break
+                if sign == -1 and tmpY < y: break
+            if tmpInnerPoints == InnerPoints: 
+                print('breakpoint')
+                break
+                print(ym,YM,y)
      print('Finished with dy = ', sign)
         
 
